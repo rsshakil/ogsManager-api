@@ -1,0 +1,2250 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ogsManager-api
+
+Parameters:
+  Environment:
+    Type: String
+
+Globals:
+  Api:
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+  Function:
+    Timeout: 30
+    Environment:
+      Variables:
+        REGION: ap-northeast-1
+        ENV: !Ref Environment
+
+Resources:
+  # Layer
+  LambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub "Manager-LambdaLayer-${Environment}"
+      Description: Dependencies for Admin LAMBDAs
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - nodejs18.x
+      LicenseInfo: "MIT"
+      RetentionPolicy: Retain
+    Metadata:
+      BuildMethod: nodejs18.x
+
+  # API Gateway
+  OGSManagerApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "OGSManagerAPI-${Environment}"
+      Description: API GateWay REST API for OGS Manager APIs
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Origin: "'*'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Headers: "'*'"
+              Access-Control-Allow-Origin: "'*'"
+      StageName: !Ref Environment
+      Auth:
+        AddDefaultAuthorizerToCorsPreflight: false
+        DefaultAuthorizer: RoleAuthorizer
+        Authorizers:
+          RoleAuthorizer:
+            FunctionArn: !GetAtt AuthorizerFunction.Arn
+            FunctionPayloadType: "TOKEN"
+            Identity:
+              Headers:
+                - Authorization
+              ReauthorizeEvery: 0
+
+  # Lambda Authorizer
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerAuthorizer-${Environment}"
+      CodeUri: lambdas/ManagerAuthorizer
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 10
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      Layers:
+        - !Ref LambdaLayer
+  # Role: 'arn:aws:iam::225702177590:role/k2manager-api-develop-AuthorizerFunctionRole-1SRJEBE52AX28'
+
+  # User
+  # ユーザー情報取得
+  ManagerUserRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserRead-${Environment}"
+      CodeUri: lambdas/ManagerUserRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /user
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /user/{userId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ユーザー情報編集
+  ManagerUserUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserUpdate-${Environment}"
+      CodeUri: lambdas/ManagerUserUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /user/{userId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+
+  # Item
+  # アイテム情報取得
+  ManagerItemRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerItemRead-${Environment}"
+      CodeUri: lambdas/ManagerItemRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /item
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /item/{itemId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # アイテム情報作成
+  ManagerItemCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerItemCreate-${Environment}"
+      CodeUri: lambdas/ManagerItemCreate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /item
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  # アイテム情報更新
+  ManagerItemUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerItemUpdate-${Environment}"
+      CodeUri: lambdas/ManagerItemUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /item/{itemId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # アイテム在庫情報更新
+  ManagerItemStockUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerItemStockUpdate-${Environment}"
+      CodeUri: lambdas/ManagerItemStockUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /item/stock/{itemId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+
+  # Category
+  # カテゴリー情報取得
+  ManagerCategoryRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerCategoryRead-${Environment}"
+      CodeUri: lambdas/ManagerCategoryRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /category
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventJp:
+          Type: Api
+          Properties:
+            Path: /category/jp
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # カテゴリー情報更新
+  ManagerCategoryEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerCategoryEdit-${Environment}"
+      CodeUri: lambdas/ManagerCategoryEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /category
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # Genre
+  # ジャンル情報取得
+  ManagerGenreRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGenreRead-${Environment}"
+      CodeUri: lambdas/ManagerGenreRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /genre
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventJp:
+          Type: Api
+          Properties:
+            Path: /genre/jp
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ジャンル情報更新
+  ManagerGenreEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGenreEdit-${Environment}"
+      CodeUri: lambdas/ManagerGenreEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /genre
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # Tag
+  # タグ情報取得
+  ManagerTagRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerTagRead-${Environment}"
+      CodeUri: lambdas/ManagerTagRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /tag
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # タグ情報更新
+  ManagerTagEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerTagEdit-${Environment}"
+      CodeUri: lambdas/ManagerTagEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /tag
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  ManagerVideoTagRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerVideoTagRead-${Environment}"
+      CodeUri: lambdas/ManagerVideoTagRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /video/tag
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerVideoTagEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerVideoTagEdit-${Environment}"
+      CodeUri: lambdas/ManagerVideoTagEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /video/tag
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # Shipping
+  # 配送情報取得
+  ManagerShippingRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerShippingRead-${Environment}"
+      CodeUri: lambdas/ManagerShippingRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /shipping
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /shipping/{shippingId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # 配送情報更新
+  ManagerShippingUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerShippingUpdate-${Environment}"
+      CodeUri: lambdas/ManagerShippingUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /shipping/{shippingId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  ManagerShippingCSVExport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerShippingCSVExport-${Environment}"
+      CodeUri: lambdas/ManagerShippingCSVExport
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /shipping/csv-export
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+
+  # Gacha
+  # 商品情報取得
+  ManagerProductRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerProductRead-${Environment}"
+      CodeUri: lambdas/ManagerProductRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /product
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /product/{gachaId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # 商品情報作成
+  ManagerProductCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerProductCreate-${Environment}"
+      CodeUri: lambdas/ManagerProductCreate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 256
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /product
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  # 商品情報更新
+  ManagerProductUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerProductUpdate-${Environment}"
+      CodeUri: lambdas/ManagerProductUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /product/{gachaId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # ガチャ情報取得
+  ManagerGachaRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaRead-${Environment}"
+      CodeUri: lambdas/ManagerGachaRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /gacha
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /gacha/{gachaId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ガチャ情報更新
+  ManagerGachaUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaUpdate-${Environment}"
+      CodeUri: lambdas/ManagerGachaUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /gacha/{gachaId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # ガチャ排出情報取得
+  ManagerGachaEmissionRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaEmissionRead-${Environment}"
+      CodeUri: lambdas/ManagerGachaEmissionRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /gacha/emission/{gachaId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ガチャ排出情報更新
+  ManagerGachaEmissionUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaEmissionUpdate-${Environment}"
+      CodeUri: lambdas/ManagerGachaEmissionUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 2048
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /gacha/emission/{gachaId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # ガチャ情報構築 呼び出し
+  ManagerGachaBuild:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaBuild-${Environment}"
+      CodeUri: lambdas/ManagerGachaBuild
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /gacha/build/{gachaId+}
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  #Recovery(stock)
+  ManagerGachaStockRecovery:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaStockRecovery-${Environment}"
+      CodeUri: lambdas/ManagerGachaStockRecovery
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /gacha/stock-recovery/{gachaId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+
+  # ガチャ情報デプロイ
+  ManagerGachaDeploy:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaDeploy-${Environment}"
+      CodeUri: lambdas/ManagerGachaDeploy
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /gacha/deploy/{gachaId+}
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  #will start processing when finilize button press
+  ManagerGachaDeployProcess:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaDeployProcess-${Environment}"
+      CodeUri: lambdas/ManagerGachaDeployProcess
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 2048
+      Timeout: 300
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+
+  # ガチャ表示順序情報取得
+  ManagerGachaOrderRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaOrderRead-${Environment}"
+      CodeUri: lambdas/ManagerGachaOrderRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /gacha/order
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ガチャ表示順序情報更新
+  ManagerGachaOrderEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaOrderEdit-${Environment}"
+      CodeUri: lambdas/ManagerGachaOrderEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /gacha/order
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  # ガチャシナリオ試算情報取得
+  ManagerGachaCalculationRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaCalculationRead-${Environment}"
+      CodeUri: lambdas/ManagerGachaCalculationRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /gacha/calculation/{gachaId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # Coupon
+  # クーポン情報取得
+  ManagerCouponRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerCouponRead-${Environment}"
+      CodeUri: lambdas/ManagerCouponRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /coupon
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /coupon/{couponId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # クーポン情報作成
+  ManagerCouponCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerCouponCreate-${Environment}"
+      CodeUri: lambdas/ManagerCouponCreate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /coupon
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  # クーポン情報更新
+  ManagerCouponUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerCouponUpdate-${Environment}"
+      CodeUri: lambdas/ManagerCouponUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /coupon/{couponId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # クーポンログ情報取得
+  ManagerCouponLogRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerCouponLogRead-${Environment}"
+      CodeUri: lambdas/ManagerCouponLogRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /coupon/log/{couponId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+
+  # お知らせ
+  # お知らせ情報取得
+  ManagerInfoRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerInfoRead-${Environment}"
+      CodeUri: lambdas/ManagerInfoRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /info
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # お知らせ情報更新
+  ManagerInfoEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerInfoEdit-${Environment}"
+      CodeUri: lambdas/ManagerInfoEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /info
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # アカウント
+  # アカウント情報取得
+  ManagerAccountRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerAccountRead-${Environment}"
+      CodeUri: lambdas/ManagerAccountRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /account
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # アカウント情報更新
+  ManagerAccountEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerAccountEdit-${Environment}"
+      CodeUri: lambdas/ManagerAccountEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /account
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # ローカライズ
+  # ローカライズ情報取得
+  ManagerLocalizeRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerLocalizeRead-${Environment}"
+      CodeUri: lambdas/ManagerLocalizeRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /localize
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ローカライズ情報更新
+  ManagerLocalizeEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerLocalizeEdit-${Environment}"
+      CodeUri: lambdas/ManagerLocalizeEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /localize
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # 動画
+  # 動画情報取得
+  ManagerVideoRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerVideoRead-${Environment}"
+      CodeUri: lambdas/ManagerVideoRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /video
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # 動画情報更新
+  ManagerVideoEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerVideoEdit-${Environment}"
+      CodeUri: lambdas/ManagerVideoEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /video
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # 課金制度
+  # 課金制度情報取得
+  ManagerBillingRuleRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerBillingRuleRead-${Environment}"
+      CodeUri: lambdas/ManagerBillingRuleRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /billing_rule
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # 課金制度情報更新
+  ManagerBillingRuleEdit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerBillingRuleEdit-${Environment}"
+      CodeUri: lambdas/ManagerBillingRuleEdit
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /billing_rule
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+
+  # プレゼント
+  # プレゼント情報取得
+  ManagerPresentRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerPresentRead-${Environment}"
+      CodeUri: lambdas/ManagerPresentRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /present
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+
+  # ファイルアップロード
+  ManagerFileUploadS3:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerFileUploadS3-${Environment}"
+      CodeUri: lambdas/ManagerFileUploadS3
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /file/upload/s3/
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+  ManagerVideoUploadS3:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerVideoUploadS3-${Environment}"
+      CodeUri: lambdas/ManagerVideoUploadS3
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /video/upload/s3
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+
+  # ファイル削除
+  ManagerFileDeleteS3:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerFileDeleteS3-${Environment}"
+      CodeUri: lambdas/ManagerFileDeleteS3
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /file/delete/s3/
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+
+  # Redisデバッグ実行
+  DebugRedisExec:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "DebugRedisExec-${Environment}"
+      CodeUri: lambdas/DebugRedisExec
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /debug/redis
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+
+  ManagerShippingFlagRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerShippingFlagRead-${Environment}"
+      CodeUri: lambdas/ManagerShippingFlagRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /shipping-flag
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ユーザーポイントの読み取り
+  ManagerUserPointRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPointRead-${Environment}"
+      CodeUri: lambdas/ManagerUserPointRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 1024
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /point/{userId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ユーザーポイント更新
+  ManagerUserPointUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPointUpdate-${Environment}"
+      CodeUri: lambdas/ManagerUserPointUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /point/{userId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # IP ブロックリストの読み取り
+  ManagerIPBlocklistRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerIPBlocklistRead-${Environment}"
+      CodeUri: lambdas/ManagerIPBlocklistRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /ip-blocklist
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # IP ブロックリストの更新
+  ManagerIPBlocklistUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerIPBlocklistUpdate-${Environment}"
+      CodeUri: lambdas/ManagerIPBlocklistUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /ip-blocklist
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+  # ドメインブロックリストの読み取り
+  ManagerDomainBlocklistRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerDomainBlocklistRead-${Environment}"
+      CodeUri: lambdas/ManagerDomainBlocklistRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /domain-blocklist
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # ドメインブロックリストの更新
+  ManagerDomainBlocklistUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerDomainBlocklistUpdate-${Environment}"
+      CodeUri: lambdas/ManagerDomainBlocklistUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /domain-blocklist
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+  # ガチャシTargetValue
+  ManagerGachaTargetValueRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaTargetValueRead-${Environment}"
+      CodeUri: lambdas/ManagerGachaTargetValueRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /target/value/{gachaId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # targetValueUpdate
+  ManagerGachaTargetValueUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerGachaTargetValueUpdate-${Environment}"
+      CodeUri: lambdas/ManagerGachaTargetValueUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /target/value/{gachaId+}
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+  # systemKeyValueRead
+  ManagerSystemDataRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerSystemDataRead-${Environment}"
+      CodeUri: lambdas/ManagerSystemDataRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /system/data
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # systemDataUpdate
+  ManagerSystemDataUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerSystemDataUpdate-${Environment}"
+      CodeUri: lambdas/ManagerSystemDataUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /system/data
+            Method: put
+            RestApiId: !Ref OGSManagerApi
+
+  ManagerUserPaymentHistoryBankRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPaymentHistoryBankRead-${Environment}"
+      CodeUri: lambdas/ManagerUserPaymentHistoryBankRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /payment-history
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /payment-history/{paymentHistoryId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerUserPaymentHistoryEpsilonCreditRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPaymentHistoryEpsilonCreditRead-${Environment}"
+      CodeUri: lambdas/ManagerUserPaymentHistoryEpsilonCreditRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /payment-history-epsilon-credit
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /payment-history-epsilon-credit/{paymentHistoryId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerUserPointHistoryCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPointHistoryCreate-${Environment}"
+      CodeUri: lambdas/ManagerUserPointHistoryCreate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /point-history
+            Method: post
+            RestApiId: !Ref OGSManagerApi
+  ManagerUserPaymentSummaryRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPaymentSummaryRead-${Environment}"
+      CodeUri: lambdas/ManagerUserPaymentSummaryRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventCreate:
+          Type: Api
+          Properties:
+            Path: /payment-summary
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerUserCSVExport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserCSVExport-${Environment}"
+      CodeUri: lambdas/ManagerUserCSVExport
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /user/csv-export
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerUserDetailsCSVExport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserDetailsCSVExport-${Environment}"
+      CodeUri: lambdas/ManagerUserDetailsCSVExport
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /user/csv-export/{userId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerUserPaymentHistoryPaypayRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerUserPaymentHistoryPaypayRead-${Environment}"
+      CodeUri: lambdas/ManagerUserPaymentHistoryPaypayRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /payment-history-paypay
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+        ApiEventDetail:
+          Type: Api
+          Properties:
+            Path: /payment-history-paypay/{paymentHistoryId+}
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  ManagerPaymentCSVExport:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerPaymentCSVExport-${Environment}"
+      CodeUri: lambdas/ManagerPaymentCSVExport
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /payment/csv-export
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+
+  # pointRead
+  ManagerPointRead:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerPointRead-${Environment}"
+      CodeUri: lambdas/ManagerPointRead
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /point-list
+            Method: get
+            RestApiId: !Ref OGSManagerApi
+  # pointUpdate
+  ManagerPointUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerPointUpdate-${Environment}"
+      CodeUri: lambdas/ManagerPointUpdate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventUpdate:
+          Type: Api
+          Properties:
+            Path: /point-list
+            Method: POST
+            RestApiId: !Ref OGSManagerApi
+
+  ManagerPointSQSCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "ManagerPointSQSCreate-${Environment}"
+      CodeUri: lambdas/ManagerPointSQSCreate
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 30
+      Role: "arn:aws:iam::225702177590:role/lambdaRole"
+      VpcConfig:
+        SecurityGroupIds:
+          - sg-0885abeb220f0e4ab
+        SubnetIds:
+          - subnet-0c83c8d5d05ba69d5
+          - subnet-07154fc0f11ff6069
+          - subnet-0e2a18cc4a80eea8f
+      Layers:
+        - !Ref LambdaLayer
+      Events:
+        ApiEventAll:
+          Type: Api
+          Properties:
+            Path: /point-sqs
+            Method: post
+            RestApiId: !Ref OGSManagerApi
